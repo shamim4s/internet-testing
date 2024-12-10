@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internet Speed Test with Graph</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 800px;
+            max-width: 100%;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        .speed {
+            font-size: 48px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .loading {
+            font-size: 16px;
+            color: #888;
+        }
+        .error {
+            font-size: 16px;
+            color: #f44336;
+        }
+        canvas {
+            width: 100%;
+            height: 500px;
+            margin-top: 20px;
+        }
+        .download-button {
+            margin-top: 20px;
+        }
+        .download-button button {
+            font-size: 18px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .download-button button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Internet Speed Test</h1>
+        <p id="status" class="loading">Testing...</p>
+        <p class="speed" id="speed">0 Mbps</p>
+        <canvas id="speedChart"></canvas>
+        <div class="download-button">
+            <button id="downloadButton">Download Graph as JPEG</button>
+        </div>
+    </div>
+
+    <script>
+        const statusElement = document.getElementById('status');
+        const speedElement = document.getElementById('speed');
+        const ctx = document.getElementById('speedChart').getContext('2d');
+        const downloadButton = document.getElementById('downloadButton');
+
+        let speedData = [];
+        let timeData = [];
+        let chart;
+
+        // Initialize the chart
+        function initChart() {
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timeData,
+                    datasets: [{
+                        label: 'Internet Speed (Mbps)',
+                        data: speedData,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: true,
+                        tension: 0.1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Time (seconds)',
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Speed (Mbps)',
+                            },
+                        }
+                    }
+                }
+            });
+        }
+
+        // Function to check internet speed
+        function checkSpeed() {
+            const startTime = new Date().getTime();
+            const imageUrl = 'https://www.gstatic.com/webp/gallery/1.png'; // A small image file for the test
+            const image = new Image();
+            
+            image.onload = function() {
+                const endTime = new Date().getTime();
+                const duration = (endTime - startTime) / 1000; // time in seconds
+                const fileSize = 1411; // size of the image in bytes
+
+                // Calculate speed in Mbps
+                const bitsLoaded = fileSize * 8; // convert to bits
+                const speed = (bitsLoaded / duration / 1024 / 1024).toFixed(2); // Mbps
+
+                // Update UI
+                speedElement.textContent = `${speed} Mbps`;
+                statusElement.textContent = 'Speed Test Completed!';
+
+                // Add data to chart
+                const timeNow = (new Date().getTime() / 1000).toFixed(0);
+                timeData.push(timeNow);
+                speedData.push(parseFloat(speed));
+
+                // Keep the last 60 data points
+                if (timeData.length > 60) {
+                    timeData.shift();
+                    speedData.shift();
+                }
+
+                // Update chart
+                chart.update();
+            };
+
+            image.onerror = function() {
+                statusElement.textContent = 'Error fetching image';
+                speedElement.textContent = 'N/A';
+            };
+
+            // Start downloading the image
+            const start = new Date().getTime();
+            image.src = `${imageUrl}?cachebust=${start}`; // Cache-busting with a query parameter
+        }
+
+        // Function to generate and download JPEG of the chart
+        function downloadGraph() {
+            const imageURL = chart.toDataURL('image/jpeg', 0.8); // Capture the chart as a JPEG image (quality: 0.8)
+            const link = document.createElement('a'); // Create a temporary download link
+            link.href = imageURL;
+            link.download = 'internet-speed-test-graph.jpg'; // Set the default file name
+            link.click(); // Trigger the download
+
+            // We are using link.click() to simulate a user action for downloading.
+        }
+
+        // Initialize the chart when the page loads
+        window.onload = function() {
+            initChart();
+            setInterval(checkSpeed, 1000); // Run the speed test every second
+        };
+
+        // Set up the download button to trigger the graph download
+        downloadButton.addEventListener('click', function() {
+            downloadGraph(); // Call the download function when the button is clicked
+        });
+
+    </script>
+
+</body>
+</html>
