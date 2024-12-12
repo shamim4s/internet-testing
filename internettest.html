@@ -149,7 +149,7 @@
                 speedData.push(parseFloat(speed));
 
                 // Keep the last 60 data points
-                if (timeData.length > 60) {
+                if (timeData.length > 1000) {
                     timeData.shift();
                     speedData.shift();
                 }
