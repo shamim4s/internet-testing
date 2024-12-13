@@ -24,34 +24,40 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             width: 800px;
             max-width: 100%;
+            overflow: hidden;
         }
         h1 {
             font-size: 28px;
             margin-bottom: 20px;
         }
         .speed {
-            font-size: 48px;
+            font-size: 36px;
             color: #4CAF50;
             font-weight: bold;
+            margin-top: 0px;
+            margin-bottom: 0px;
         }
         .loading {
-            font-size: 16px;
+            font-size: 12px;
             color: #888;
+            margin-top: 0px;
+            margin-bottom: 0;
         }
-        .error {
-            font-size: 16px;
-            color: #f44336;
+        .graph-container {
+            width: 100%;
+            overflow-x: auto; /* Enable horizontal scrolling */
+            margin-top: 10px;
         }
         canvas {
-            width: 100%;
-            height: 500px;
-            margin-top: 20px;
+            height: 320px !important;
+            width: 1000px; /* Adjust width to accommodate more data points */
+            flex-shrink: 0; /* Prevent canvas from shrinking */
         }
         .download-button {
-            margin-top: 20px;
+            margin-top: 10px;
         }
         .download-button button {
-            font-size: 18px;
+            font-size: 14px;
             padding: 10px 20px;
             background-color: #4CAF50;
             color: white;
@@ -70,7 +76,11 @@
         <h1>Internet Speed Test</h1>
         <p id="status" class="loading">Testing...</p>
         <p class="speed" id="speed">0 Mbps</p>
-        <canvas id="speedChart"></canvas>
+        
+        <div class="graph-container">
+            <canvas id="speedChart"></canvas>
+        </div>
+        
         <div class="download-button">
             <button id="downloadButton">Download Graph as JPEG</button>
         </div>
@@ -84,7 +94,9 @@
 
         let speedData = [];
         let timeData = [];
+        let internetStatus = []; // To track internet status (only red points when inactive)
         let chart;
+        let previousStatus = null; // Track previous internet status
 
         // Initialize the chart
         function initChart() {
@@ -92,17 +104,28 @@
                 type: 'line',
                 data: {
                     labels: timeData,
-                    datasets: [{
-                        label: 'Internet Speed (Mbps)',
-                        data: speedData,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        fill: true,
-                        tension: 0.1,
-                    }]
+                    datasets: [
+                        {
+                            label: 'Internet Speed (Mbps)',
+                            data: speedData,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            fill: true,
+                            tension: 0.1,
+                        },
+                        {
+                            label: 'Internet Status',
+                            data: internetStatus,
+                            borderColor: 'rgba(255, 0, 0, 1)', // Red for inactive internet
+                            backgroundColor: 'rgba(255, 0, 0, 0.2)', // Red for no connection
+                            fill: false,
+                            borderWidth: 2,
+                            tension: 0.1,
+                        }
+                    ]
                 },
                 options: {
-                    responsive: true,
+                    responsive: false, // Set false for fixed width
                     scales: {
                         x: {
                             type: 'linear',
@@ -132,7 +155,7 @@
             
             image.onload = function() {
                 const endTime = new Date().getTime();
-                const duration = (endTime - startTime) / 1000; // time in seconds
+                const duration = (endTime - startTime) / 2000; // time in seconds
                 const fileSize = 1411; // size of the image in bytes
 
                 // Calculate speed in Mbps
@@ -144,23 +167,53 @@
                 statusElement.textContent = 'Speed Test Completed!';
 
                 // Add data to chart
-                const timeNow = (new Date().getTime() / 1000).toFixed(0);
+                const timeNow = (new Date().getTime() / 2000).toFixed(0);
                 timeData.push(timeNow);
                 speedData.push(parseFloat(speed));
 
+                // Mark internet status as active (but no red point added)
+                internetStatus.push(null); // Do not add red point when internet is active
+
                 // Keep the last 60 data points
-                if (timeData.length > 1000) {
+                if (timeData.length > 1100) {
                     timeData.shift();
                     speedData.shift();
+                    internetStatus.shift();
                 }
 
-                // Update chart
+                // Always update chart even when internet status is active
                 chart.update();
+
+                // Clear error log if internet is back
+                if (previousStatus === 0) {
+                    // Hide error log when internet is back
+                }
+
+                // Update previous status
+                previousStatus = 1;
             };
 
             image.onerror = function() {
+                // Show error log if internet is not available
                 statusElement.textContent = 'Error fetching image';
                 speedElement.textContent = 'N/A';
+                // Show error log message
+
+                // Mark internet status as red (inactive)
+                internetStatus.push(0); // 0 represents no internet (red)
+
+                // Keep the last 60 data points
+                if (timeData.length > 1100) {
+                    timeData.shift();
+                    speedData.shift();
+                    internetStatus.shift();
+                }
+
+                // Always update chart even when internet status is inactive
+                chart.update();
+
+                // Update previous status
+                previousStatus = 0;
             };
 
             // Start downloading the image
@@ -170,19 +223,18 @@
 
         // Function to generate and download JPEG of the chart
         function downloadGraph() {
+            // Ensure chart is fully rendered before attempting to download
             const imageURL = chart.toDataURL('image/jpeg', 0.8); // Capture the chart as a JPEG image (quality: 0.8)
             const link = document.createElement('a'); // Create a temporary download link
             link.href = imageURL;
             link.download = 'internet-speed-test-graph.jpg'; // Set the default file name
             link.click(); // Trigger the download
-
-            // We are using link.click() to simulate a user action for downloading.
         }
 
         // Initialize the chart when the page loads
         window.onload = function() {
             initChart();
-            setInterval(checkSpeed, 1000); // Run the speed test every second
+            setInterval(checkSpeed, 2000); // Run the speed test every 2 seconds
         };
 
         // Set up the download button to trigger the graph download
